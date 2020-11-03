@@ -50,8 +50,11 @@ class Parser(object):
         train = Dataset(self.transform, args.train, **args)
         dev = Dataset(self.transform, args.dev)
         test = Dataset(self.transform, args.test)
+        logger.info("Building the datasets")
         train.build(args.batch_size, args.buckets, True, dist.is_initialized())
+        logger.info("train built")
         dev.build(args.batch_size, args.buckets)
+        logger.info("dev built")
         test.build(args.batch_size, args.buckets)
         logger.info(f"\n{'train:':6} {train}\n{'dev:':6} {dev}\n{'test:':6} {test}\n")
 

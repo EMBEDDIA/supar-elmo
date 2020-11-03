@@ -5,7 +5,7 @@ from collections import Counter
 import torch
 from supar.utils.fn import pad
 from supar.utils.vocab import Vocab
-
+from allennlp.commands.elmo import ElmoEmbedder
 
 class RawField(object):
     r"""
@@ -368,3 +368,82 @@ class ChartField(Field):
 
     def compose(self, sequences):
         return [pad(i).to(self.device) for i in zip(*sequences)]
+    
+class ElmoField(Field):
+    def __init__(self, name, pad=None, unk=None, bos=None, eos=None, lower=False, use_vocab=True, tokenize=None, fn=None, elmo_weights=None, elmo_options=None,  mapping=None):
+        self.name = name
+        self.pad = pad
+        self.unk = unk
+        self.bos = bos
+        self.eos = eos
+        self.lower = lower
+        self.use_vocab = use_vocab
+        self.tokenize = tokenize
+        self.fn = fn
+        #self.elmo = ElmoEmbedder(elmo_options, elmo_weights, -1) #or however this is called
+        self.mapping = mapping #TODO: think about how to implement this mapping procedure here
+
+        self.specials = [token for token in [pad, unk, bos, eos]
+                        if token is not None]
+    def build(self, dataset, min_freq=1, embed=None):
+        r"""
+        Constructs a :class:`Vocab` object for this field from the dataset.
+        If the vocabulary has already existed, this function will have no effect.
+
+        Args:
+            dataset (Dataset):
+                A :class:`Dataset` object. One of the attributes should be named after the name of this field.
+            min_freq (int):
+                The minimum frequency needed to include a token in the vocabulary. Default: 1.
+            embed (Embedding):
+                An Embedding object, words in which will be extended to the vocabulary. Default: ``None``.
+        """
+
+        if hasattr(self, 'vocab'):
+            return
+        sequences = getattr(dataset, self.name)
+        counter = Counter(token
+                          for seq in sequences
+                          for token in self.preprocess(seq))
+        self.vocab = Vocab(counter, min_freq, self.specials, self.unk_index)
+
+        #if not embed:
+            #self.embed = None
+        #else:
+            #tokens = self.preprocess(embed.tokens)
+            ## if the `unk` token has existed in the pretrained,
+            ## then replace it with a self-defined one
+            #if embed.unk:
+                #tokens[embed.unk_index] = self.unk
+
+            #self.vocab.extend(tokens)
+            #self.embed = torch.zeros(len(self.vocab), embed.dim)
+            #self.embed[self.vocab[tokens]] = embed.vectors
+            #self.embed /= torch.std(self.embed)
+    def compose(self,sequences):
+        return sequences
+    def transform(self, sequences):
+        r"""
+        Turns a list of sequences that use this field into tensors.
+
+        Each sequence is first preprocessed and then numericalized if needed.
+
+        Args:
+            sequences (list[list[str]]):
+                A list of sequences.
+
+        Returns:
+            A list of tensors transformed from the input sequences.
+        """
+
+        sequences = [self.preprocess(seq) for seq in sequences]
+        #if self.use_vocab: #TODO: HERE PUT ELMO EMBEDDER INSTEAD OF VOCAB[seq]
+        #    sequences = self.elmo.embed_batch(sequences)
+            #sequences = [self.vocab[seq] for seq in sequences]
+        #if self.bos:
+        #    sequences = [[self.bos_index] + seq for seq in sequences]
+        #if self.eos:
+        #    sequences = [seq + [self.eos_index] for seq in sequences]
+        #sequences = [torch.tensor(seq) for seq in sequences]
+        #TODO: TRY RETURNING JUST SEQUENCES AS WORDS, SEE IF IT WORKS, WE WILL EMBED THEM LATER
+        return sequences

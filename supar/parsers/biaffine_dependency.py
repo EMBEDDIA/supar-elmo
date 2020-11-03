@@ -8,11 +8,12 @@ from supar.models import BiaffineDependencyModel
 from supar.parsers.parser import Parser
 from supar.utils import Config, Dataset, Embedding
 from supar.utils.common import bos, pad, unk
-from supar.utils.field import Field, SubwordField
+from supar.utils.field import Field, SubwordField, ElmoField
 from supar.utils.fn import ispunct
 from supar.utils.logging import get_logger, progress_bar
 from supar.utils.metric import AttachmentMetric
 from supar.utils.transform import CoNLL
+from allennlp.commands.elmo import ElmoEmbedder
 
 logger = get_logger(__name__)
 
@@ -35,7 +36,7 @@ class BiaffineDependencyParser(Parser):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        if self.args.feat in ('char', 'bert'):
+        if self.args.feat in ('char', 'bert', 'elmo'):
             self.WORD, self.FEAT = self.transform.FORM
         else:
             self.WORD, self.FEAT = self.transform.FORM, self.transform.CPOS
@@ -43,7 +44,7 @@ class BiaffineDependencyParser(Parser):
         self.puncts = torch.tensor([i
                                     for s, i in self.WORD.vocab.stoi.items()
                                     if ispunct(s)]).to(self.args.device)
-
+        self.elmo = ElmoEmbedder(self.args.elmo_options, self.args.elmo_weights, -1)
     def train(self, train, dev, test, buckets=32, batch_size=5000,
               punct=False, tree=False, proj=False, partial=False, verbose=True, **kwargs):
         r"""
@@ -132,14 +133,23 @@ class BiaffineDependencyParser(Parser):
         self.model.train()
 
         bar, metric = progress_bar(loader), AttachmentMetric()
-
+        # words, feats, etc. come from loader! loader is train.loader, where train is Dataset
         for words, feats, arcs, rels in bar:
             self.optimizer.zero_grad()
-
+            feat_embs = self.elmo.embed_batch(feats)
             mask = words.ne(self.WORD.pad_index)
             # ignore the first token of each sentence
             mask[:, 0] = 0
-            s_arc, s_rel = self.model(words, feats)
+            feats1 = torch.zeros(words.shape+(1024,))
+            feats2 = torch.zeros(words.shape+(1024,))
+            #print(words.shape)
+            #print(len(feat_embs), len(feat_embs[0]), len(feat_embs[0][0]))
+            for sentence in range(len(feat_embs)):
+                for token in range(len(feat_embs[sentence][1])):
+                    feats1[sentence][token] = torch.Tensor(feat_embs[sentence][1][token])
+                    feats2[sentence][token] = torch.Tensor(feat_embs[sentence][2][token])
+            feats = torch.cat((feats1, feats2), -1)
+            s_arc, s_rel = self.model(words, feats) #INFO: here is the data input, y = model(x)
             loss = self.model.loss(s_arc, s_rel, arcs, rels, mask, self.args.partial)
             loss.backward()
             nn.utils.clip_grad_norm_(self.model.parameters(), self.args.clip)
@@ -162,9 +172,17 @@ class BiaffineDependencyParser(Parser):
         total_loss, metric = 0, AttachmentMetric()
 
         for words, feats, arcs, rels in loader:
+            feat_embs = self.elmo.embed_batch(feats)
             mask = words.ne(self.WORD.pad_index)
             # ignore the first token of each sentence
             mask[:, 0] = 0
+            feats1 = torch.zeros(words.shape+(1024,))
+            feats2 = torch.zeros(words.shape+(1024,))
+            for sentence in range(len(feat_embs)):
+                for token in range(len(feat_embs[sentence][1])):
+                    feats1[sentence][token] = torch.Tensor(feat_embs[sentence][1][token])
+                    feats2[sentence][token] = torch.Tensor(feat_embs[sentence][2][token])
+            feats = torch.cat((feats1, feats2), -1)
             s_arc, s_rel = self.model(words, feats)
             loss = self.model.loss(s_arc, s_rel, arcs, rels, mask, self.args.partial)
             arc_preds, rel_preds = self.model.decode(s_arc, s_rel, mask,
@@ -188,10 +206,18 @@ class BiaffineDependencyParser(Parser):
         preds = {}
         arcs, rels, probs = [], [], []
         for words, feats in progress_bar(loader):
+            feat_embs = self.elmo.embed_batch(feats)
             mask = words.ne(self.WORD.pad_index)
             # ignore the first token of each sentence
             mask[:, 0] = 0
             lens = mask.sum(1).tolist()
+            feats1 = torch.zeros(words.shape+(1024,))
+            feats2 = torch.zeros(words.shape+(1024,))
+            for sentence in range(len(feat_embs)):
+                for token in range(len(feat_embs[sentence][1])):
+                    feats1[sentence][token] = torch.Tensor(feat_embs[sentence][1][token])
+                    feats2[sentence][token] = torch.Tensor(feat_embs[sentence][2][token])
+            feats = torch.cat((feats1, feats2), -1)
             s_arc, s_rel = self.model(words, feats)
             arc_preds, rel_preds = self.model.decode(s_arc, s_rel, mask,
                                                      self.args.tree,
@@ -250,17 +276,27 @@ class BiaffineDependencyParser(Parser):
                                 fix_len=args.fix_len,
                                 tokenize=tokenizer.tokenize)
             FEAT.vocab = tokenizer.get_vocab()
+        elif args.feat == 'elmo':
+            logger.info("Hello, initing ElmoField")
+            #WORD = ElmoField('words', pad=pad, unk='<UNK>', bos=bos, elmo_weights=args.elmo_weights, elmo_options=args.elmo_options)
+            FEAT = ElmoField('elmo', bos=bos) # TODO: change WORD to be layer0 of elmo, FEAT to be concat of layer1 and layer2?
         else:
             FEAT = Field('tags', bos=bos)
         ARC = Field('arcs', bos=bos, use_vocab=False, fn=CoNLL.get_arcs)
         REL = Field('rels', bos=bos)
         if args.feat in ('char', 'bert'):
             transform = CoNLL(FORM=(WORD, FEAT), HEAD=ARC, DEPREL=REL)
+        elif args.feat == 'elmo':
+            logger.info("calling CoNLL transform")
+            # FEAT ima se kar 3 layerje, to bo za popravit nekak
+            transform = CoNLL(FORM=(WORD, FEAT), HEAD=ARC, DEPREL=REL)
         else:
             transform = CoNLL(FORM=WORD, CPOS=FEAT, HEAD=ARC, DEPREL=REL)
-
+        logger.info("initing train Dataset")
         train = Dataset(transform, args.train)
-        WORD.build(train, args.min_freq, (Embedding.load(args.embed, args.unk) if args.embed else None))
+        #WORD.build(train, args.min_freq, (Embedding.load(args.embed, args.unk) if args.embed else None))
+        logger.info("Building WORD, FEAT, REL fields")
+        WORD.build(train)
         FEAT.build(train)
         REL.build(train)
         args.update({
@@ -272,6 +308,7 @@ class BiaffineDependencyParser(Parser):
             'bos_index': WORD.bos_index,
             'feat_pad_index': FEAT.pad_index,
         })
+        logger.info("Loading model")
         model = cls.MODEL(**args)
         model.load_pretrained(WORD.embed).to(args.device)
         return cls(args, model, transform)
