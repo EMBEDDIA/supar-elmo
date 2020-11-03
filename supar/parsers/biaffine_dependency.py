@@ -137,18 +137,26 @@ class BiaffineDependencyParser(Parser):
         for words, feats, arcs, rels in bar:
             self.optimizer.zero_grad()
             feat_embs = self.elmo.embed_batch(feats)
+            #TODO: dodaj mapping, ce in samo ce gre za vecmap
             mask = words.ne(self.WORD.pad_index)
             # ignore the first token of each sentence
             mask[:, 0] = 0
+            
+            feats0 = torch.zeros(words.shape+(1024,)) # words.clone()
             feats1 = torch.zeros(words.shape+(1024,))
             feats2 = torch.zeros(words.shape+(1024,))
-            #print(words.shape)
-            #print(len(feat_embs), len(feat_embs[0]), len(feat_embs[0][0]))
+            # words get ignored, all input comes from feats - 3 elmo layers
+            # still inputting words due to reasons(tm)
+            
+            #feats0 = feats0.unsqueeze(-1)
+            #feats0 = feats0.expand(words.shape+(1024,))
             for sentence in range(len(feat_embs)):
                 for token in range(len(feat_embs[sentence][1])):
+                    feats0[sentence][token] = torch.Tensor(feat_embs[sentence][0][token])
                     feats1[sentence][token] = torch.Tensor(feat_embs[sentence][1][token])
                     feats2[sentence][token] = torch.Tensor(feat_embs[sentence][2][token])
-            feats = torch.cat((feats1, feats2), -1)
+            feats = torch.cat((feats0, feats1, feats2), -1)
+            #feats = feats.to('cpu') #TODO: fix to allow cpu or gpu
             s_arc, s_rel = self.model(words, feats) #INFO: here is the data input, y = model(x)
             loss = self.model.loss(s_arc, s_rel, arcs, rels, mask, self.args.partial)
             loss.backward()
@@ -173,16 +181,19 @@ class BiaffineDependencyParser(Parser):
 
         for words, feats, arcs, rels in loader:
             feat_embs = self.elmo.embed_batch(feats)
+            #TODO: dodaj mapping, vecmap in/ali elmogan
             mask = words.ne(self.WORD.pad_index)
             # ignore the first token of each sentence
             mask[:, 0] = 0
+            feats0 = torch.zeros(words.shape+(1024,))
             feats1 = torch.zeros(words.shape+(1024,))
             feats2 = torch.zeros(words.shape+(1024,))
             for sentence in range(len(feat_embs)):
                 for token in range(len(feat_embs[sentence][1])):
+                    feats0[sentence][token] = torch.Tensor(feat_embs[sentence][0][token])
                     feats1[sentence][token] = torch.Tensor(feat_embs[sentence][1][token])
                     feats2[sentence][token] = torch.Tensor(feat_embs[sentence][2][token])
-            feats = torch.cat((feats1, feats2), -1)
+            feats = torch.cat((feats0, feats1, feats2), -1)
             s_arc, s_rel = self.model(words, feats)
             loss = self.model.loss(s_arc, s_rel, arcs, rels, mask, self.args.partial)
             arc_preds, rel_preds = self.model.decode(s_arc, s_rel, mask,
@@ -207,17 +218,20 @@ class BiaffineDependencyParser(Parser):
         arcs, rels, probs = [], [], []
         for words, feats in progress_bar(loader):
             feat_embs = self.elmo.embed_batch(feats)
+            #TODO: dodaj mapping, vecmap in/ali elmogan
             mask = words.ne(self.WORD.pad_index)
             # ignore the first token of each sentence
             mask[:, 0] = 0
             lens = mask.sum(1).tolist()
+            feats0 = torch.zeros(words.shape+(1024,))
             feats1 = torch.zeros(words.shape+(1024,))
             feats2 = torch.zeros(words.shape+(1024,))
             for sentence in range(len(feat_embs)):
                 for token in range(len(feat_embs[sentence][1])):
+                    feats0[sentence][token] = torch.Tensor(feat_embs[sentence][0][token])
                     feats1[sentence][token] = torch.Tensor(feat_embs[sentence][1][token])
                     feats2[sentence][token] = torch.Tensor(feat_embs[sentence][2][token])
-            feats = torch.cat((feats1, feats2), -1)
+            feats = torch.cat((feats0, feats1, feats2), -1)
             s_arc, s_rel = self.model(words, feats)
             arc_preds, rel_preds = self.model.decode(s_arc, s_rel, mask,
                                                      self.args.tree,
@@ -278,8 +292,7 @@ class BiaffineDependencyParser(Parser):
             FEAT.vocab = tokenizer.get_vocab()
         elif args.feat == 'elmo':
             logger.info("Hello, initing ElmoField")
-            #WORD = ElmoField('words', pad=pad, unk='<UNK>', bos=bos, elmo_weights=args.elmo_weights, elmo_options=args.elmo_options)
-            FEAT = ElmoField('elmo', bos=bos) # TODO: change WORD to be layer0 of elmo, FEAT to be concat of layer1 and layer2?
+            FEAT = ElmoField('elmo', bos=bos) #
         else:
             FEAT = Field('tags', bos=bos)
         ARC = Field('arcs', bos=bos, use_vocab=False, fn=CoNLL.get_arcs)

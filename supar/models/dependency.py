@@ -120,7 +120,8 @@ class BiaffineDependencyModel(nn.Module):
             self.feat_embed = nn.Embedding(num_embeddings=n_feats,
                                            embedding_dim=n_feat_embed)
         elif feat == 'elmo':
-            self.n_feat_embed = 2048
+            self.n_feat_embed = 3*1024
+            self.n_embed = 0
         else:
             raise RuntimeError("The feat type should be in ['char', 'bert', 'tag'].")
         self.embed_dropout = IndependentDropout(p=embed_dropout)
@@ -183,15 +184,14 @@ class BiaffineDependencyModel(nn.Module):
         if hasattr(self, 'pretrained'):
             word_embed += self.pretrained(words)
         #feat_embed = self.feat_embed(feats)
-        #word_embed, feat_embed = self.embed_dropout(word_embed, feat_embed)
         word_embed, feat_embed = self.embed_dropout(word_embed, feats)
         # concatenate the word and feat representations
         #word_embed = torch.Tensor([[[v for v in token] for token in sentence[0]] for sentence in words])
         #feat1_embed = torch.Tensor([[[v for v in token] for token in sentence[1]] for sentence in words])
         #feat2_embed = torch.Tensor([[[v for v in token] for token in sentence[2]] for sentence in words])
-        embed = torch.cat((word_embed, feat_embed), -1)
-
-        x = pack_padded_sequence(embed, mask.sum(1), True, False)
+        #embed = torch.cat((word_embed, feat_embed), -1)
+        #embed = feat_embed
+        x = pack_padded_sequence(feat_embed, mask.sum(1), True, False)
         x, _ = self.lstm(x)
         x, _ = pad_packed_sequence(x, True, total_length=seq_len)
         x = self.lstm_dropout(x)
