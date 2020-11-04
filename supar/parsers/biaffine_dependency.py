@@ -14,7 +14,7 @@ from supar.utils.logging import get_logger, progress_bar
 from supar.utils.metric import AttachmentMetric
 from supar.utils.transform import CoNLL
 from allennlp.commands.elmo import ElmoEmbedder
-
+from supar.xlingual.mapper import Elmogan, Vecmap
 logger = get_logger(__name__)
 
 
@@ -45,6 +45,14 @@ class BiaffineDependencyParser(Parser):
                                     for s, i in self.WORD.vocab.stoi.items()
                                     if ispunct(s)]).to(self.args.device)
         self.elmo = ElmoEmbedder(self.args.elmo_options, self.args.elmo_weights, -1)
+        #TODO: init mapper method with either vecmap or elmogan, depending on args.map_method
+        if self.args.map_method == 'vecmap':
+            self.mapper = Vecmap(self.args)
+        elif self.args.map_method == 'elmogan':
+            self.mapper = Elmogan(self.args)
+        else:
+            self.mapper = None
+            
     def train(self, train, dev, test, buckets=32, batch_size=5000,
               punct=False, tree=False, proj=False, partial=False, verbose=True, **kwargs):
         r"""
@@ -138,6 +146,10 @@ class BiaffineDependencyParser(Parser):
             self.optimizer.zero_grad()
             feat_embs = self.elmo.embed_batch(feats)
             #TODO: dodaj mapping, ce in samo ce gre za vecmap
+            if self.args.map_method == 'vecmap':
+                # map feat_embs with vecmap, actually self.mapper defined in class init
+                feat_embs = mapper.map_batch(feat_embs)
+                
             mask = words.ne(self.WORD.pad_index)
             # ignore the first token of each sentence
             mask[:, 0] = 0
@@ -182,6 +194,9 @@ class BiaffineDependencyParser(Parser):
         for words, feats, arcs, rels in loader:
             feat_embs = self.elmo.embed_batch(feats)
             #TODO: dodaj mapping, vecmap in/ali elmogan
+            if self.mapper:
+                # map feat_embs with self.mapper defined in class init
+                feat_embs = mapper.map_batch(feat_embs)
             mask = words.ne(self.WORD.pad_index)
             # ignore the first token of each sentence
             mask[:, 0] = 0
@@ -219,6 +234,9 @@ class BiaffineDependencyParser(Parser):
         for words, feats in progress_bar(loader):
             feat_embs = self.elmo.embed_batch(feats)
             #TODO: dodaj mapping, vecmap in/ali elmogan
+            if self.mapper:
+                # map feat_embs with self.mapper defined in class init
+                feat_embs = mapper.map_batch(feat_embs)
             mask = words.ne(self.WORD.pad_index)
             # ignore the first token of each sentence
             mask[:, 0] = 0
