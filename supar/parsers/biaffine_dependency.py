@@ -14,7 +14,7 @@ from supar.utils.logging import get_logger, progress_bar
 from supar.utils.metric import AttachmentMetric
 from supar.utils.transform import CoNLL
 from allennlp.commands.elmo import ElmoEmbedder
-from supar.xlingual.mapper import Elmogan, Vecmap
+from supar.xlingual.elmo_mapper import Elmogan, Vecmap
 logger = get_logger(__name__)
 
 

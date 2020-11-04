@@ -1,4 +1,4 @@
-import supar.xlingual.embeddings as embeddings
+import supar.xlingual.vecmap_embeddings as embeddings
 from supar.xlingual.cupy_utils import *
 import numpy as np
 

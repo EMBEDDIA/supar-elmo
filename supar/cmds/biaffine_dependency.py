@@ -1,10 +1,8 @@
 # -*- coding: utf-8 -*-
-
 import argparse
 
 from supar import BiaffineDependencyParser
-from supar.cmds.cmd import parse
-
+from supar.cmds.maincmd import parse
 
 def main():
     parser = argparse.ArgumentParser(description='Create Biaffine Dependency Parser.')
@@ -32,7 +30,7 @@ def main():
     subparser.add_argument('--map-layer0', help='path to mapping model for layer0')
     subparser.add_argument('--map-layer1', help='path to mapping model for layer1')
     subparser.add_argument('--map-layer2', help='path to mapping model for layer2')
-    subparser.add_argument('--map-method', choices['vecmap', 'elmogan', 'none'], default='none')
+    subparser.add_argument('--map-method', choices=['vecmap', 'elmogan', 'none'], default='none')
     subparser.add_argument('--vecmap-lang', help='was data language source(src) or target(trg) during mapping (vecmap only)')
     # evaluate
     subparser = subparsers.add_parser('evaluate', help='Evaluate the specified parser and dataset.')
@@ -44,7 +42,7 @@ def main():
     subparser.add_argument('--map-layer0', help='path to mapping model for layer0')
     subparser.add_argument('--map-layer1', help='path to mapping model for layer1')
     subparser.add_argument('--map-layer2', help='path to mapping model for layer2')
-    subparser.add_argument('--map-method', choices['vecmap', 'elmogan', 'none'], default='none')
+    subparser.add_argument('--map-method', choices=['vecmap', 'elmogan', 'none'], default='none')
     subparser.add_argument('--map-direction', choices=[0,1], help='which direction to map, xx-yy_to_yy-xx, 0 implies xx->yy, 1 implies yy->xx (elmogan only)')
     subparser.add_argument('--vecmap-lang', help='was data language source(src) or target(trg) during mapping (vecmap only)')
     # predict
@@ -58,7 +56,7 @@ def main():
     subparser.add_argument('--map-layer0', help='path to mapping model for layer0')
     subparser.add_argument('--map-layer1', help='path to mapping model for layer1')
     subparser.add_argument('--map-layer2', help='path to mapping model for layer2')
-    subparser.add_argument('--map-method', choices['vecmap', 'elmogan', 'none'], default='none')
+    subparser.add_argument('--map-method', choices=['vecmap', 'elmogan', 'none'], default='none')
     subparser.add_argument('--map-direction', choices=[0,1], help='which direction to map, xx-yy_to_yy-xx, 0 implies xx->yy, 1 implies yy->xx (elmogan only)')
     subparser.add_argument('--vecmap-lang', help='was data language source(src) or target(trg) during mapping (vecmap only)')
     parse(parser)

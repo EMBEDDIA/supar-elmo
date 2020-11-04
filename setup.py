@@ -22,7 +22,7 @@ setup(
     setup_requires=[
         'setuptools>=18.0',
     ],
-    install_requires=['torch>=1.4.0', 'transformers', 'nltk', 'numpy', 'allennlp==0.9.0', 'tensorflow'],
+    install_requires=['torch>=1.4.0', 'transformers', 'nltk', 'allennlp==0.9.0'],
     entry_points={
         'console_scripts': [
             'biaffine-dependency=supar.cmds.biaffine_dependency:main',
