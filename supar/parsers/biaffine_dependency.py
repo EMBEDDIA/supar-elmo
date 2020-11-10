@@ -148,7 +148,7 @@ class BiaffineDependencyParser(Parser):
             #TODO: dodaj mapping, ce in samo ce gre za vecmap
             if self.args.map_method == 'vecmap':
                 # map feat_embs with vecmap, actually self.mapper defined in class init
-                feat_embs = mapper.map_batch(feat_embs)
+                feat_embs = self.mapper.map_batch(feat_embs)
                 
             mask = words.ne(self.WORD.pad_index)
             # ignore the first token of each sentence
@@ -168,7 +168,10 @@ class BiaffineDependencyParser(Parser):
                     feats1[sentence][token] = torch.Tensor(feat_embs[sentence][1][token])
                     feats2[sentence][token] = torch.Tensor(feat_embs[sentence][2][token])
             feats = torch.cat((feats0, feats1, feats2), -1)
-            #feats = feats.to('cpu') #TODO: fix to allow cpu or gpu
+            if str(self.args.device) == '-1':
+                feats = feats.to('cpu')
+            else:
+                feats = feats.to('cuda:'+str(self.args.device)) #TODO: fix to allow cpu or gpu
             s_arc, s_rel = self.model(words, feats) #INFO: here is the data input, y = model(x)
             loss = self.model.loss(s_arc, s_rel, arcs, rels, mask, self.args.partial)
             loss.backward()
@@ -196,7 +199,7 @@ class BiaffineDependencyParser(Parser):
             #TODO: dodaj mapping, vecmap in/ali elmogan
             if self.mapper:
                 # map feat_embs with self.mapper defined in class init
-                feat_embs = mapper.map_batch(feat_embs)
+                feat_embs = self.mapper.map_batch(feat_embs)
             mask = words.ne(self.WORD.pad_index)
             # ignore the first token of each sentence
             mask[:, 0] = 0
@@ -209,6 +212,10 @@ class BiaffineDependencyParser(Parser):
                     feats1[sentence][token] = torch.Tensor(feat_embs[sentence][1][token])
                     feats2[sentence][token] = torch.Tensor(feat_embs[sentence][2][token])
             feats = torch.cat((feats0, feats1, feats2), -1)
+            if str(self.args.device) == '-1':
+                feats = feats.to('cpu')
+            else:
+                feats = feats.to('cuda:'+str(self.args.device))
             s_arc, s_rel = self.model(words, feats)
             loss = self.model.loss(s_arc, s_rel, arcs, rels, mask, self.args.partial)
             arc_preds, rel_preds = self.model.decode(s_arc, s_rel, mask,
@@ -236,7 +243,7 @@ class BiaffineDependencyParser(Parser):
             #TODO: dodaj mapping, vecmap in/ali elmogan
             if self.mapper:
                 # map feat_embs with self.mapper defined in class init
-                feat_embs = mapper.map_batch(feat_embs)
+                feat_embs = self.mapper.map_batch(feat_embs)
             mask = words.ne(self.WORD.pad_index)
             # ignore the first token of each sentence
             mask[:, 0] = 0
@@ -250,6 +257,10 @@ class BiaffineDependencyParser(Parser):
                     feats1[sentence][token] = torch.Tensor(feat_embs[sentence][1][token])
                     feats2[sentence][token] = torch.Tensor(feat_embs[sentence][2][token])
             feats = torch.cat((feats0, feats1, feats2), -1)
+            if str(self.args.device) == '-1':
+                feats = feats.to('cpu')
+            else:
+                feats = feats.to('cuda:'+str(self.args.device))
             s_arc, s_rel = self.model(words, feats)
             arc_preds, rel_preds = self.model.decode(s_arc, s_rel, mask,
                                                      self.args.tree,
