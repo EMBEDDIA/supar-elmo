@@ -30,6 +30,7 @@ def parse(parser):
         parser.train(**args)
     elif args.mode == 'evaluate':
         parser = Parser.load(args.path)
+        print(args)
         parser.evaluate(**args)
     elif args.mode == 'predict':
         parser = Parser.load(args.path)

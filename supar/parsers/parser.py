@@ -98,8 +98,10 @@ class Parser(object):
 
     def evaluate(self, data, buckets=8, batch_size=5000, **kwargs):
         args = self.args.update(locals())
+        print("called evaluate from parser.py")
+        #print("args:", args)
+        print(self.args.map_method)
         init_logger(logger, verbose=args.verbose)
-
         self.transform.train()
         logger.info("Loading the data")
         dataset = Dataset(self.transform, data)

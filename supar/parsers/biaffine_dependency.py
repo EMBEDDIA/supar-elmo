@@ -45,11 +45,11 @@ class BiaffineDependencyParser(Parser):
                                     for s, i in self.WORD.vocab.stoi.items()
                                     if ispunct(s)]).to(self.args.device)
         self.elmo = ElmoEmbedder(self.args.elmo_options, self.args.elmo_weights, -1)
-        #TODO: init mapper method with either vecmap or elmogan, depending on args.map_method
+        #print(self.__dict__)
         if self.args.map_method == 'vecmap':
-            self.mapper = Vecmap(self.args)
+            self.mapper = Vecmap(vars(self.args))
         elif self.args.map_method == 'elmogan':
-            self.mapper = Elmogan(self.args)
+            self.mapper = Elmogan(vars(self.args))
         else:
             self.mapper = None
             
@@ -105,6 +105,18 @@ class BiaffineDependencyParser(Parser):
         Returns:
             The loss scalar and evaluation results.
         """
+        print("called evaluate function")
+        #print(kwargs)
+        #print(self.args.map_method)
+        self.elmo = ElmoEmbedder(kwargs['elmo_options'], kwargs['elmo_weights'], -1)
+        if kwargs['map_method'] == 'vecmap':
+            self.mapper = Vecmap(kwargs)
+            print(self.mapper)
+        elif kwargs['map_method'] == 'elmogan':
+            self.mapper = Elmogan(kwargs)
+            print(self.mapper)
+        else:
+            self.mapper = None
 
         return super().evaluate(**Config().update(locals()))
 
@@ -190,16 +202,17 @@ class BiaffineDependencyParser(Parser):
 
     @torch.no_grad()
     def _evaluate(self, loader):
+        print("called _evaluate function")
+        print(self.mapper)
         self.model.eval()
 
         total_loss, metric = 0, AttachmentMetric()
 
         for words, feats, arcs, rels in loader:
-            feat_embs = self.elmo.embed_batch(feats)
-            #TODO: dodaj mapping, vecmap in/ali elmogan
+            feat_embs0 = self.elmo.embed_batch(feats)
             if self.mapper:
                 # map feat_embs with self.mapper defined in class init
-                feat_embs = self.mapper.map_batch(feat_embs)
+                feat_embs = self.mapper.map_batch(feat_embs0)
             mask = words.ne(self.WORD.pad_index)
             # ignore the first token of each sentence
             mask[:, 0] = 0
