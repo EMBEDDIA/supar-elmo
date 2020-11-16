@@ -105,9 +105,6 @@ class BiaffineDependencyParser(Parser):
         Returns:
             The loss scalar and evaluation results.
         """
-        print("called evaluate function")
-        #print(kwargs)
-        #print(self.args.map_method)
         self.elmo = ElmoEmbedder(kwargs['elmo_options'], kwargs['elmo_weights'], -1)
         if kwargs['map_method'] == 'vecmap':
             self.mapper = Vecmap(kwargs)
@@ -146,7 +143,15 @@ class BiaffineDependencyParser(Parser):
         Returns:
             A :class:`~supar.utils.Dataset` object that stores the predicted results.
         """
-
+        self.elmo = ElmoEmbedder(kwargs['elmo_options'], kwargs['elmo_weights'], -1)
+        if kwargs['map_method'] == 'vecmap':
+            self.mapper = Vecmap(kwargs)
+            print(self.mapper)
+        elif kwargs['map_method'] == 'elmogan':
+            self.mapper = Elmogan(kwargs)
+            print(self.mapper)
+        else:
+            self.mapper = None
         return super().predict(**Config().update(locals()))
 
     def _train(self, loader):
@@ -253,7 +258,6 @@ class BiaffineDependencyParser(Parser):
         arcs, rels, probs = [], [], []
         for words, feats in progress_bar(loader):
             feat_embs = self.elmo.embed_batch(feats)
-            #TODO: dodaj mapping, vecmap in/ali elmogan
             if self.mapper:
                 # map feat_embs with self.mapper defined in class init
                 feat_embs = self.mapper.map_batch(feat_embs)
