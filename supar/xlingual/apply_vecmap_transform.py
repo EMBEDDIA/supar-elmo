@@ -3,7 +3,7 @@ from supar.xlingual.cupy_utils import *
 import numpy as np
 
 def vecmap_orth(x, w):
-    embeddings.normalize(x, ['unit', 'center', 'unit'])
+    #embeddings.normalize(x, ['unit', 'center', 'unit'])
     xw = np.empty_like(x)
     x.dot(w, out=xw)
     return xw

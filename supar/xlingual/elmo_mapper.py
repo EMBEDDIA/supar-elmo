@@ -1,6 +1,6 @@
 import tensorflow
 from tensorflow.keras.models import Model, load_model
-from supar.xlingual.apply_vecmap_transform import vecmap
+from supar.xlingual.apply_vecmap_transform import vecmap, vecmap_orth
 import numpy as np
 
 
@@ -46,6 +46,8 @@ class Vecmap():
             self.lang = 'wz2'
         else:
             self.lang = None
+        if 'orthogonal' in args:
+            self.orth = args['orthogonal']
     
     def map_batch(self, batch):    
         for x,sentence in enumerate(batch):
@@ -58,7 +60,10 @@ class Vecmap():
     def apply_mapping(self, sentence, W):
         if W:
             #print('apply_mapping=True')
-            mapped_sentence = vecmap(sentence, W[self.lang], W['s'])
+            if self.orth:
+                mapped_sentence = vecmap_orth(sentence, W[self.lang])
+            else:
+                mapped_sentence = vecmap(sentence, W[self.lang], W['s'])
         else:
             #print('apply_mapping=False')
             mapped_sentence = sentence

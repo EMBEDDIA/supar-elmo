@@ -32,6 +32,7 @@ def main():
     subparser.add_argument('--map-layer2', help='path to mapping model for layer2')
     subparser.add_argument('--map-method', choices=['vecmap', 'elmogan', 'none'], default='none')
     subparser.add_argument('--vecmap-lang', help='was data language source(src) or target(trg) during mapping (vecmap only)')
+    subparser.add_argument('--orthogonal', action='store_true', help='use only orthogonal vecmap mapping, without extra processing')
     # evaluate
     subparser = subparsers.add_parser('evaluate', help='Evaluate the specified parser and dataset.')
     subparser.add_argument('--punct', action='store_true', help='whether to include punctuation')
@@ -45,6 +46,7 @@ def main():
     subparser.add_argument('--map-method', choices=['vecmap', 'elmogan', 'none'], default='none')
     subparser.add_argument('--map-direction', choices=[0,1], type=int, help='which direction to map, xx-yy_to_yy-xx, 0 implies xx->yy, 1 implies yy->xx (elmogan only)')
     subparser.add_argument('--vecmap-lang', help='was data language source(src) or target(trg) during mapping (vecmap only)')
+    subparser.add_argument('--orthogonal', action='store_true', help='use only orthogonal vecmap mapping, without extra processing')
     # predict
     subparser = subparsers.add_parser('predict', help='Use a trained parser to make predictions.')
     subparser.add_argument('--prob', action='store_true', help='whether to output probs')
@@ -59,6 +61,7 @@ def main():
     subparser.add_argument('--map-method', choices=['vecmap', 'elmogan', 'none'], default='none')
     subparser.add_argument('--map-direction', choices=[0,1], type=int, help='which direction to map, xx-yy_to_yy-xx, 0 implies xx->yy, 1 implies yy->xx (elmogan only)')
     subparser.add_argument('--vecmap-lang', help='was data language source(src) or target(trg) during mapping (vecmap only)')
+    subparser.add_argument('--orthogonal', action='store_true', help='use only orthogonal vecmap mapping, without extra processing')
     parse(parser)
 
 
