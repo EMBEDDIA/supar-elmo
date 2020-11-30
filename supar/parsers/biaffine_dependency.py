@@ -218,6 +218,8 @@ class BiaffineDependencyParser(Parser):
             if self.mapper:
                 # map feat_embs with self.mapper defined in class init
                 feat_embs = self.mapper.map_batch(feat_embs0)
+            else:
+                feat_embs = feat_embs0
             mask = words.ne(self.WORD.pad_index)
             # ignore the first token of each sentence
             mask[:, 0] = 0
