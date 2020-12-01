@@ -14,7 +14,7 @@ from supar.utils.logging import get_logger, progress_bar
 from supar.utils.metric import AttachmentMetric
 from supar.utils.transform import CoNLL
 from allennlp.commands.elmo import ElmoEmbedder
-from supar.xlingual.elmo_mapper import Elmogan, Vecmap
+from supar.xlingual.elmo_mapper import Elmogan, Vecmap, Muse
 logger = get_logger(__name__)
 
 
@@ -50,6 +50,8 @@ class BiaffineDependencyParser(Parser):
             self.mapper = Vecmap(vars(self.args))
         elif self.args.map_method == 'elmogan':
             self.mapper = Elmogan(vars(self.args))
+        elif self.args.map_method == 'muse':
+            self.mapper = Muse(vars(self.args))
         else:
             self.mapper = None
             
@@ -108,10 +110,12 @@ class BiaffineDependencyParser(Parser):
         self.elmo = ElmoEmbedder(kwargs['elmo_options'], kwargs['elmo_weights'], -1)
         if kwargs['map_method'] == 'vecmap':
             self.mapper = Vecmap(kwargs)
-            print(self.mapper)
+            #print(self.mapper)
         elif kwargs['map_method'] == 'elmogan':
             self.mapper = Elmogan(kwargs)
-            print(self.mapper)
+            #print(self.mapper)
+        elif kwargs['map_method'] == 'muse':
+            self.mapper = Muse(kwargs)
         else:
             self.mapper = None
 
@@ -146,10 +150,12 @@ class BiaffineDependencyParser(Parser):
         self.elmo = ElmoEmbedder(kwargs['elmo_options'], kwargs['elmo_weights'], -1)
         if kwargs['map_method'] == 'vecmap':
             self.mapper = Vecmap(kwargs)
-            print(self.mapper)
+            #print(self.mapper)
         elif kwargs['map_method'] == 'elmogan':
             self.mapper = Elmogan(kwargs)
-            print(self.mapper)
+            #print(self.mapper)
+        elif kwargs['map_method'] == 'muse':
+            self.mapper = Muse(kwargs)
         else:
             self.mapper = None
         return super().predict(**Config().update(locals()))

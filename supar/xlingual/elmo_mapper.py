@@ -34,7 +34,26 @@ class Elmogan():
             mapped_sentence = sentence
 
         return mapped_sentence
-    
+
+class Muse():
+    def __init__(self, args):
+        import torch
+        self.layer0 = torch.load(args['map_layer0'])
+        self.layer1 = torch.load(args['map_layer1'])
+        self.layer2 = torch.load(args['map_layer2'])
+
+    def map_batch(self, batch):
+        for x,sentence in enumerate(batch):
+            seqlen = sentence[0].shape[0]
+            batch[x][0][0:seqlen] = self.apply_mapping(sentence[0], self.layer0)
+            batch[x][1][0:seqlen] = self.apply_mapping(sentence[1], self.layer1)
+            batch[x][2][0:seqlen] = self.apply_mapping(sentence[2], self.layer2)
+        return batch
+
+    def apply_mapping(self, sentence, W):
+        mapped_sentence = np.array([np.matmul(W,v) for v in sentence])
+        return mapped_sentence
+
 class Vecmap():
     def __init__(self, args):
         self.layer0 = np.load(args['map_layer0'])
