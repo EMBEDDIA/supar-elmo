@@ -15,6 +15,7 @@ from supar.utils.metric import AttachmentMetric
 from supar.utils.transform import CoNLL
 from allennlp.commands.elmo import ElmoEmbedder
 from supar.xlingual.elmo_mapper import Elmogan, Vecmap, Muse
+from elmoformanylangs import Embedder as EFML
 logger = get_logger(__name__)
 
 
@@ -44,7 +45,11 @@ class BiaffineDependencyParser(Parser):
         self.puncts = torch.tensor([i
                                     for s, i in self.WORD.vocab.stoi.items()
                                     if ispunct(s)]).to(self.args.device)
-        self.elmo = ElmoEmbedder(self.args.elmo_options, self.args.elmo_weights, -1)
+        if self.args.elmo_options:
+            self.elmo = ElmoEmbedder(self.args.elmo_options, self.args.elmo_weights, -1)
+        else:
+            self.efml = EFML(self.args.elmo_weights)
+            self.elmo = False
         #print(self.__dict__)
         if self.args.map_method == 'vecmap':
             self.mapper = Vecmap(vars(self.args))
@@ -107,7 +112,10 @@ class BiaffineDependencyParser(Parser):
         Returns:
             The loss scalar and evaluation results.
         """
-        self.elmo = ElmoEmbedder(kwargs['elmo_options'], kwargs['elmo_weights'], -1)
+        if kwargs['elmo_options']:
+            self.elmo = ElmoEmbedder(kwargs['elmo_options'], kwargs['elmo_weights'], -1)
+        else:
+            self.efml = EFML(kwargs['elmo_weights'])
         if kwargs['map_method'] == 'vecmap':
             self.mapper = Vecmap(kwargs)
             #print(self.mapper)
@@ -147,7 +155,11 @@ class BiaffineDependencyParser(Parser):
         Returns:
             A :class:`~supar.utils.Dataset` object that stores the predicted results.
         """
-        self.elmo = ElmoEmbedder(kwargs['elmo_options'], kwargs['elmo_weights'], -1)
+        
+        if kwargs['elmo_options']:
+            self.elmo = ElmoEmbedder(kwargs['elmo_options'], kwargs['elmo_weights'], -1)
+        else:
+            self.efml = EFML(kwargs['elmo_weights'])
         if kwargs['map_method'] == 'vecmap':
             self.mapper = Vecmap(kwargs)
             #print(self.mapper)
@@ -167,7 +179,10 @@ class BiaffineDependencyParser(Parser):
         # words, feats, etc. come from loader! loader is train.loader, where train is Dataset
         for words, feats, arcs, rels in bar:
             self.optimizer.zero_grad()
-            feat_embs = self.elmo.embed_batch(feats)
+            if self.elmo:
+                feat_embs = self.elmo.embed_batch(feats)
+            else:
+                feat_embs = self.efml.sents2elmo(feats, output_layer=-2)
             #TODO: dodaj mapping, ce in samo ce gre za vecmap
             if self.args.map_method == 'vecmap':
                 # map feat_embs with vecmap, actually self.mapper defined in class init
@@ -220,7 +235,10 @@ class BiaffineDependencyParser(Parser):
         total_loss, metric = 0, AttachmentMetric()
 
         for words, feats, arcs, rels in loader:
-            feat_embs0 = self.elmo.embed_batch(feats)
+            if self.elmo:
+                feat_embs0 = self.elmo.embed_batch(feats)
+            else:
+                feat_embs0 = self.efml.sents2elmo(feats, output_layer=-2)
             if self.mapper:
                 # map feat_embs with self.mapper defined in class init
                 feat_embs = self.mapper.map_batch(feat_embs0)
@@ -265,7 +283,10 @@ class BiaffineDependencyParser(Parser):
         preds = {}
         arcs, rels, probs = [], [], []
         for words, feats in progress_bar(loader):
-            feat_embs = self.elmo.embed_batch(feats)
+            if self.elmo:
+                feat_embs = self.elmo.embed_batch(feats)
+            else:
+                feat_embs = self.efml.sents2elmo(feats, output_layer=-2)
             if self.mapper:
                 # map feat_embs with self.mapper defined in class init
                 feat_embs = self.mapper.map_batch(feat_embs)
