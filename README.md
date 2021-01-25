@@ -1,9 +1,9 @@
 # SuPar ELMo
-This is an edited version of `SuPar` which provides the ability to train and evaluate depdendency parser models using ELMo embeddings. Both monolingual and cross-lingual capabilities are supported. Cross-lingual option supports `vecmap` mapping (https://github.com/artetxem/vecmap) and `ELMoGAN` mapping (https://github.com/MatejUlcar/elmogan).
+This is an edited version of `SuPar` which provides the ability to train and evaluate depdendency parser models using ELMo embeddings. Both monolingual and cross-lingual capabilities are supported. Cross-lingual option supports mapping embeddings with `vecmap` (https://github.com/artetxem/vecmap https://github.com/EMBEDDIA/vecmap-changes), `MUSE` (https://github.com/facebookresearch/MUSE) and `ELMoGAN` (https://github.com/EMBEDDIA/elmogan).
 
 This version currently doesn't support the use of any other type of embeddings other than ELMo. To install, run:
 ```sh
-$ git clone https://github.com/MatejUlcar/parser && cd parser && git checkout elmo
+$ git clone https://github.com/EMBEDDIA/parser && cd parser && git checkout elmo
 $ python setup.py install
 ```
 
